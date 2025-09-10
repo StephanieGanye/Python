@@ -64,24 +64,178 @@ def main():
     print("Let's see if your dream home will stand strong or sink like the Titanic") 
     print()
     print()
-    time.sleep(1) # Brief pause
-   
+    wait_for_enter()
+    print()
+    print("First, let's choose the soil type you want to build on")
+    print()
     # Ask user to input soil type
     soil_type = choose_soil_type()
+    print()
+    print("Great choice!")
 
     # Draw soil based on user input
-    draw_soil(canvas, soil_type)
-
-    # Tell user the pros and cons of the soil type they chose
+    soil_particles = draw_soil(canvas, soil_type)
+    print()
+    # Get pros and cons of selected soil type
     properties = pros_and_cons(soil_type)
-
     # Sort soil type to its full name
-    type_name = sort_type(soil_type)
-
+    type_name, soil_characteristics = sort_type(soil_type)
     # Display selected soil properties and related pros and cons
     print_variable_guide(soil_characteristics, type_name, properties)
 
+
+    wait_for_enter("Press Enter to see the properties of your chosen soil type...")
+    print()
+    
+
+
+    # Get foundation properties from user
+    foundation_depth, foundation_width = foundation_properties()
+
+
+    # Compute median values for selected soil type
+    cohesion = (soil_characteristics[0] + soil_characteristics[1])/2
+    friction_angle = (soil_characteristics[2] + soil_characteristics[3])/2
+    unit_weight = (soil_characteristics[4] + soil_characteristics[5])/2
+    
+    # Get building floor area and number of floors from user
+    number_of_floors, building_area = get_building_details()
+
+    # Get foundation type from user
+    foundation_type = get_foundation_type(soil_type)
+
+
+
+    # Compute building pressure based on foundation type
+    if foundation_type == "R":
+        foundation_area = foundation_width ** 2
+        num_footings = 1 # For raft foundation, we consider it as one footing
+        
+        # Calculate total load and pressure
+        total_load = FLOOR_WEIGHT * number_of_floors * building_area
+        q_applied = total_load / foundation_area
+
+    elif foundation_type == "I":
+        # For isolated footing, we need number of footings
+        print()
+        print("For an isolated footing, we need to know how many columns/footings your building has")
+        print()
+        num_footings = input("How many columns/footings? ")
+        while (not num_footings.isdigit()) or (int(num_footings) < 1):
+            print()
+            print("That is not a valid number")
+            num_footings = int(input("Enter a valid number: "))
+            print()
+
+        num_footings = int(num_footings) # Convert input from string to integer
+        
+        # Calculate load per footing and pressure
+        foundation_area = num_footings * foundation_width ** 2
+        total_load = FLOOR_WEIGHT * number_of_floors * building_area
+        load_per_footing = total_load / num_footings
+        area_per_footing = foundation_width ** 2
+        q_applied = load_per_footing / area_per_footing
+    print()
+    print("Cool!")
+    print()
+    wait_for_enter()
+
+
+    print()
+    print("Awesome!")
+    print()
+    print("Now let's determine the amount of pressure your building is exerting")
+    print()
+    wait_for_enter()
+    print("We first find the load your building is exerting with the formula \nTotal Load = Floor weight * No. of floors * Building area")
+    print()
+    print("Then determine the pressure by dividing the load by the foundation area (or area of one footing for isolated)")
+    wait_for_enter()
+    print()
+    print("Using that formula...")
+    print()
+    print(f"Your building will apply {q_applied:.2f} kN/m² pressure on the soil")
+    print()
+    print()
+    wait_for_enter()
+
+    # Calculate ultimate bearing capacity
+    print("Now let's find out amount of pressure the soil you chose can take")
+    user_preference = input("Press Enter to see the formula used or type s to skip: ")
+    if user_preference.lower() == 's':
+        print()
+        print("Alright, skipping the formula")
+        time.sleep(1)
+    else:
+        print("""
+            The formula used to calculate that is below
+            q_ult = c * Nc + gamma * D * Nq + 0.5 * gamma * B * Ng
+
+            Where:
+            q_ult = ultimate bearing capacity (kN/m²)
+            c      = soil cohesion (kPa or kN/m²)
+            Nc     = bearing capacity factor for cohesion (depends on φ)
+            gamma  = unit weight of soil (kN/m³)
+            D      = depth of foundation (m)
+            Nq     = bearing capacity factor for surcharge (depends on φ)
+            B      = width of foundation (m)
+            Ng     = bearing capacity factor for unit weight (depends on φ)
+            """
+        )
+
+        print()
+        print()
+
+    print("Comparing your building pressure and ultimate pressure of your soil reveals that...")
+    time.sleep(2)
+    print()
+    print()
+
+    
+    # Calculate ultimate bearing capacity based on soil properties
+    Nc, Nq, Ng = compute_bearing_factors(friction_angle)
+    q_ult = cohesion * Nc + unit_weight * foundation_depth * Nq + 0.5 * unit_weight * foundation_width * Ng
+    
+    
+    # Check if building load is safe
+    if q_applied < q_ult:
+        print("Yay, your building is safe!! \nFind me now and let's bring it to life")
+        time.sleep(5)
+        
+        # Show visual representation of building
+        print()
+        print("We'll now draw a simplified version of your building's foundation \nto show how its weight spreads into the soil")
+        
+        draw_foundation(canvas, foundation_type, foundation_width, foundation_depth, num_footings)
+        
+        draw_building(canvas, number_of_floors)
+
+        
+        # Animate soil particles multiple times to simulate natural movement and settling
+        for _ in range(15):
+            animate_soil_particles(canvas, soil_particles)
+
+    else:
+        print("Ooops your building is pulling a Titanic! \nFind a Geotechnical Engineer(me) ASAP! \nOr use a deeper foundation, different soil or modify your foundation type (Finding me is a better option though😁)")
+        # Draw failed foundation in red
+        draw_foundation(canvas, foundation_type, foundation_width, foundation_depth, num_footings, color="red")
+        draw_building(canvas, number_of_floors)
+        # Dramatic soil movement
+        animate_failure_soil_particles(canvas, soil_particles)
+        # Show failure message
+        show_failure_message(canvas)
+
+    animate_clouds(canvas, cloud_one, cloud_two, cloud_three)
     canvas.wait_for_click()
+
+    canvas.wait_for_click()
+def wait_for_enter(message="Press Enter to continue..."):
+    if not hasattr(wait_for_enter, "shown"):
+        input(message)
+        wait_for_enter.shown = True
+    else:
+        input()
+
 
 def draw_cloud(canvas, initial_x, initial_y,color):
     """
@@ -129,7 +283,7 @@ def animate_clouds(canvas, cloud_one, cloud_two, cloud_three):
     # Track change in x direction for third cloud
     x3_change = 1.5
 
-    while True:
+    for i in range(300):
         # Move first cloud diagonally
         if canvas.get_top_y(cloud_one[2]) == -90:
             x1_change = -x1_change
@@ -192,8 +346,8 @@ def draw_soil(canvas, soil_type):
     particle_size = 10
     initial_x = 0
     initial_y = 3 * CANVAS_HEIGHT/4
-    color = 'deep brown'
-
+    color = 'saddle brown'
+    soil_particle = []
     
     # Draw soil
     soil = canvas.create_rectangle(0, 3 * CANVAS_HEIGHT/4,
@@ -204,12 +358,12 @@ def draw_soil(canvas, soil_type):
         while (initial_y + particle_size) <= CANVAS_HEIGHT:
             while (initial_x + particle_size) <= CANVAS_WIDTH:
 
-                soil_particle = canvas.create_oval(initial_x,
+                particle_id = canvas.create_oval(initial_x,
                                         initial_y,
                                         initial_x + particle_size,
                                         initial_y + particle_size,
                                         color)
-
+                soil_particle.append((particle_id, initial_x, initial_y))
                 spacing = random.randint(1,25)
                 # Update initial_x to begin at specified point on right 
                 initial_x += (particle_size + spacing)
@@ -224,12 +378,12 @@ def draw_soil(canvas, soil_type):
         while (initial_y + particle_size) <= CANVAS_HEIGHT:
             while (initial_x + particle_size) <= CANVAS_WIDTH:
 
-                soil_particle = canvas.create_oval(initial_x,
+                particle_id = canvas.create_oval(initial_x,
                                         initial_y,
                                         initial_x + particle_size,
                                         initial_y + particle_size,
                                         color)
-
+                soil_particle.append((particle_id, initial_x, initial_y))
                 spacing = random.randint(10, 25)
                 # Update initial_x to begin at specified point on right 
                 initial_x += (particle_size + spacing)
@@ -243,12 +397,13 @@ def draw_soil(canvas, soil_type):
         while (initial_y + particle_size) <= CANVAS_HEIGHT:
             while (initial_x + particle_size) <= CANVAS_WIDTH:
 
-                soil_particle = canvas.create_oval(initial_x,
+                particle_id = canvas.create_oval(initial_x,
                                         initial_y,
                                         initial_x + particle_size,
                                         initial_y + particle_size,
                                         color)
 
+                soil_particle.append((particle_id, initial_x, initial_y))
                 spacing = 5
                 # Update initial_x to begin at specified point on right 
                 initial_x += (particle_size + spacing)
@@ -264,12 +419,12 @@ def draw_soil(canvas, soil_type):
                 particle_size_x = random.randint(3, 10)
                 particle_size_y = 1
 
-                soil_particle = canvas.create_oval(initial_x,
+                particle_id = canvas.create_oval(initial_x,
                                         initial_y,
                                         initial_x + particle_size_x,
                                         initial_y + particle_size_y,
                                         'beige')
-
+                soil_particle.append((particle_id, initial_x, initial_y))
                 spacing = random.randint(20, 30)
                 # Update initial_x to begin at specified point on right 
                 initial_x += (particle_size + spacing)
@@ -285,12 +440,12 @@ def draw_soil(canvas, soil_type):
                 particle_size_x = 6
                 particle_size_y = 3
 
-                soil_particle = canvas.create_rectangle(initial_x,
+                particle_id = canvas.create_rectangle(initial_x,
                                         initial_y,
                                         initial_x + particle_size_x,
                                         initial_y + particle_size_y,
                                         'beige')
-
+                soil_particle.append((particle_id, initial_x, initial_y))
                 spacing = random.randint(20, 25)
                 # Update initial_x to begin at specified point on right 
                 initial_x += (particle_size + spacing)
@@ -306,12 +461,13 @@ def draw_soil(canvas, soil_type):
                 particle_size_x = random.randint(1, 7)
                 particle_size_y = 1
 
-                soil_particle = canvas.create_oval(initial_x,
+                particle_id = canvas.create_oval(initial_x,
                                         initial_y,
                                         initial_x + particle_size_x,
                                         initial_y + particle_size_y,
                                         'beige')
-
+                
+                soil_particle.append((particle_id, initial_x, initial_y))
                 spacing = random.randint(20, 40)
                 # Update initial_x to begin at specified point on right 
                 initial_x += (particle_size + spacing)
@@ -332,7 +488,8 @@ def draw_soil(canvas, soil_type):
                 polygon_bottom_right = initial_x + random.randint(7,10)
                 particle_size_x = random.randint(7, 15)
                 particle_size_y = random.randint(7, 15)
-                soil_particle = canvas.create_polygon(polygon_top_left,
+                
+                particle_id = canvas.create_polygon(polygon_top_left,
                                                 initial_y,
                                                 polygon_top_right,
                                                 initial_y + 2,
@@ -346,13 +503,70 @@ def draw_soil(canvas, soil_type):
                                                 initial_y + (1/2 * particle_size_poly)
                                                 )
                 spacing = random.randint(0,3)
+                soil_particle.append((particle_id, initial_x, initial_y))
                 # Update initial_x to begin at specified point on right 
                 initial_x = (polygon_middle_right + spacing) 
             
             # Update initial_y to begin below
             initial_y += (10 + spacing)
             initial_x = random.randint(0, 3)
-   
+    return soil_particle
+
+def animate_soil_particles(canvas, soil_particles):
+    base_y = 3 * CANVAS_HEIGHT / 4
+    particle_size = 10
+    updated_particles = []
+    for i, (particle_id, x, y) in enumerate(soil_particles):
+        # Get current y position
+        current_y = canvas.get_top_y(particle_id)
+        # The closer to base_y, the more it moves
+        distance_from_base = current_y - base_y
+        # Particles near the base move more, deeper ones less
+        move_factor = max(1, 10 - int(distance_from_base / 8))
+        dx = random.randint(-1, 1)
+        dy = random.randint(move_factor // 2, move_factor)
+        # Calculate new position
+        new_x = canvas.get_left_x(particle_id) + dx
+        new_y = current_y + dy
+        new_x2 = new_x + particle_size
+        new_y2 = new_y + particle_size
+        overlapping = canvas.find_overlapping(new_x, new_y, new_x2, new_y2)
+        # Only move if not overlapping with others (or only itself)
+        if not overlapping or (len(overlapping) == 1 and overlapping[0] == particle_id):
+            canvas.move(particle_id, dx, dy)
+            updated_particles.append((particle_id, new_x, new_y))
+        else:
+            # If can't move, keep old position
+            updated_particles.append((particle_id, x, y))
+    # Update the soil_particles list in place
+    soil_particles[:] = updated_particles
+    time.sleep(0.08)
+def animate_failure_soil_particles(canvas, soil_particles):
+    base_y = 3 * CANVAS_HEIGHT / 4
+    particle_size = 10
+    for _ in range(20):  # More frames for dramatic effect
+        updated_particles = []
+        for i, (particle_id, x, y) in enumerate(soil_particles):
+            current_y = canvas.get_top_y(particle_id)
+            distance_from_base = current_y - base_y
+            # Move much more on failure
+            move_factor = max(5, 25 - int(distance_from_base / 8))
+            dx = random.randint(-5, 5)
+            dy = random.randint(move_factor // 2, move_factor)
+            new_x = canvas.get_left_x(particle_id) + dx
+            new_y = current_y + dy
+            new_x2 = new_x + particle_size
+            new_y2 = new_y + particle_size
+            overlapping = canvas.find_overlapping(new_x, new_y, new_x2, new_y2)
+            if not overlapping or (len(overlapping) == 1 and overlapping[0] == particle_id):
+                canvas.move(particle_id, dx, dy)
+                updated_particles.append((particle_id, new_x, new_y))
+            else:
+                updated_particles.append((particle_id, x, y))
+        soil_particles[:] = updated_particles
+        time.sleep(0.05)
+
+# Gives user pros and cons of the soil type they chose
 def pros_and_cons(soil_type_choosen):
     if soil_type_choosen == "LS":
         pros_and_cons = """
@@ -433,12 +647,10 @@ def sort_type(soil_type):
         soil_characteristics = GRAVEL
         type_name = "Gravel"
 
-    return type_name  
+    return type_name, soil_characteristics  
 
 def print_variable_guide(soil_characteristics, type_name, properties):
     print(f"You have selected: {type_name}\n{properties}")
-
-    time.sleep(15) # Pause for 15 seconds
 
     print(f"Typical property values for {type_name} are: ")
 
@@ -452,8 +664,217 @@ def print_variable_guide(soil_characteristics, type_name, properties):
     print("For this program, we will use the median values of the ranges")
     print()
     print()
-    time.sleep(5)
+    
 
+def foundation_properties():
+    # Prompt user for foundation properties
+    print("Now that you have your soil type its time to determine your foundation properties")
+    print()
+    print("Namely your foundation depth (how deep you'll dig)")
+    print("and your foundation width (how wide it will be)")
+    print()
+    print("Please enter values in mm (typical depth: 600–3000 mm, width: 300–1500 mm)")
+    print()
+    
+    # Depth input with limits
+    while True:
+        foundation_depth = input("What is your foundation depth in mm? ")
+        if foundation_depth.isdigit():
+            foundation_depth = float(foundation_depth)
+            if 600 <= foundation_depth <= 3000:
+                break
+            else:
+                print("Please enter a depth between 600 mm and 3000 mm.")
+        else:
+            print("That is not a valid number")
+
+    print() 
+    
+    # Width input with limits
+    while True:
+        foundation_width = input("What is your foundation width in mm? ")
+        if foundation_width.isdigit():
+            foundation_width = float(foundation_width)
+            if 300 <= foundation_width <= 1500:
+                break
+            else:
+                print("Please enter a width between 300 mm and 1500 mm.")
+        else:
+            print("That is not a valid number")
+    
+    print()
+    print("Great!")
+    print()
+    wait_for_enter()
+
+    # Convert to meters for calculations
+    return foundation_depth / 1000, foundation_width / 1000
+
+def get_building_details():
+    # Let user input building properties 
+    print("It's finally time for you to build your house")
+    # Ask user how many floors their building has (max 4)
+    print("For this program we will assume each floor of your building carries a load of 6kN/m²")
+    print("And hey I know you are rich but your building is limited to 4 floors here")
+    print()
+    number_of_floors = input("So how many floors does your dream house have? ")
+    while not number_of_floors.isdigit() or int(number_of_floors) < 1 or int(number_of_floors) > 4:
+        print()
+        print("That is not a valid number")
+        number_of_floors = input("Enter a valid number: ")
+    number_of_floors = int(number_of_floors) # Convert input from string to float
+    print()
+    print("Nice!")
+    print()
+    print()
+    
+    # Ask user for building area (default 100m²)
+    building_area = input("Enter the building area in m² or press enter to use 100m²: ")
+
+    if building_area == "":
+        building_area = 100
+    else:
+        while not building_area.isdigit() or float(building_area) < 1:
+            print()
+            print("That is not a valid number")
+            building_area = input("Enter a valid number: ")
+        building_area = float(building_area) # Convert input from string to float
+    print()
+    print("Awesome!")
+    print()
+    return number_of_floors, building_area
+
+
+"""
+Gives a background of the two foundation types the user can choose
+Asks the user to select one
+Returns the user's choice
+"""
+def get_foundation_type(soil_type):
+    # Explain and choose foundation type
+    print("There are several foundation types")
+    print("A geotechnical engineer's choice depends on the building load, the soil type and the environment")
+    print()
+    wait_for_enter()
+
+    print("For this program you have the chance to choose between two foundation types, raft and isolated footings")
+    wait_for_enter()
+    print()
+    # Ask user to choose a foundation type: Raft or Isolated Footing
+    print("A Raft(R) foundation, much like a boat is a large connected foundation, \nthat spreads across the base of the building")
+    wait_for_enter()
+    print()
+    print("Isolated Footings(I) on the other hand consists of several columns \nholding up the building, each with it's own footing")
+    wait_for_enter()
+    
+    # Runs if soil is prone to settlement, that is is SC, SS or LS
+    # Advices user to choose raft foundation 
+    if soil_type in ["SC", "SS", "LS"]:
+        print()
+        print("💡 Tip:")
+        print("The soil you selected is prone to settlement.")
+        print("Consider using a raft foundation to reduce the risk of uneven sinking.")
+        wait_for_enter()
+
+    print()
+    foundation_type = input("Which foundation type will you build on? R or I: ").upper()
+    while foundation_type != "I" and foundation_type != "R":
+        print()
+        foundation_type = input("Please choose a valid foundation type. Either R or I: ").upper()
+    return foundation_type
+
+def draw_foundation(canvas, foundation_type, foundation_width, foundation_depth, num_footings=1, color="grey"):
+    # Visual scale: 1m = 10 pixels (adjust as needed)
+    scale = 30
+    foundation_top = 3 * CANVAS_HEIGHT / 4
+    foundation_bottom = foundation_top + foundation_depth * scale
+
+    if foundation_type == "R":
+        left_x = CANVAS_WIDTH / 2 - foundation_width * scale
+        right_x = CANVAS_WIDTH / 2 + foundation_width * scale
+        canvas.create_rectangle(left_x, foundation_top, right_x, foundation_bottom, color)
+    elif foundation_type == "I":
+        # Confine footings under the building
+        building_left = CANVAS_WIDTH / 2 - 50
+        building_right = CANVAS_WIDTH / 2 + 50
+        building_width = building_right - building_left
+        footing_width = foundation_width * scale
+        if num_footings == 1:
+            centers = [CANVAS_WIDTH / 2]
+        else:
+            step = building_width / (num_footings - 1) if num_footings > 1 else 0
+            centers = [building_left + i * step for i in range(num_footings)]
+        for center_x in centers:
+            left_x = center_x - footing_width / 2
+            right_x = center_x + footing_width / 2
+            canvas.create_rectangle(left_x, foundation_top, right_x, foundation_bottom, color)
+
+def draw_building(canvas,number_of_floors):
+    # Draw building above foundation
+    # Each floor is represented as a blue rectangle
+    left_x = CANVAS_WIDTH/2 - 50
+    # Start the building just above the soil/foundation
+    top_y = 3 * CANVAS_HEIGHT / 4 - number_of_floors * 70
+    right_x = CANVAS_WIDTH/2 + 50
+    bottom_y = 3 * CANVAS_HEIGHT / 4
+    
+    # Create building floors
+    for i in range(number_of_floors): 
+        canvas.create_rectangle(left_x, top_y, right_x, top_y + 70, "blue")
+        top_y += 70 # Move up for the next floor
+
+
+    # Draw windows
+    left_x = CANVAS_WIDTH/2 + 10
+    top_y = CANVAS_HEIGHT - 160
+    right_x = CANVAS_WIDTH/2 + 40
+    bottom_y = CANVAS_HEIGHT - 140
+    for i in range(number_of_floors):
+        canvas.create_rectangle(left_x,top_y,right_x,bottom_y,"grey")
+        top_y -= 70
+        bottom_y -= 70
+
+    """
+    # Vertical arrows (loads)
+    arrow_x_positions = [CANVAS_WIDTH/2 - 30, CANVAS_WIDTH/2, CANVAS_WIDTH/2 + 30]
+    y_start = building_base_bottom - 10   # start from high above
+    y_end = building_base_bottom + 40       # ends at top of building
+
+    for x in arrow_x_positions:
+        canvas.create_line(x, y_start, x, y_end, "black")
+        canvas.create_line(x - 5, y_end - 5, x, y_end, "black")  # left wing
+        canvas.create_line(x + 5, y_end - 5, x, y_end, "black")  # right wing
+
+    # Load spread zone
+    canvas.create_line(building_left, building_base_bottom, building_left - 50, CANVAS_HEIGHT, "green")
+    canvas.create_line(building_right, building_base_bottom, building_right + 50, CANVAS_HEIGHT, "green")
+
+    # Displays words centered horizontally on the canva
+    centered_x_position = CANVAS_WIDTH/2 - (len("Load spread zone")/2)*7
+    canvas.create_text(centered_x_position,
+    CANVAS_HEIGHT - 50, "Load spread zone", color = "black",
+    font_size = 15)
+    """
+     
+def compute_bearing_factors(friction_angle):
+    phi = math.radians(friction_angle)
+    Nq = math.exp(2*math.pi*(0.75 - friction_angle/360)*math.tan(phi)) \
+         / (2 * math.cos(math.radians(45 + friction_angle/2))**2)
+    Nc = (Nq - 1) / math.tan(phi) if friction_angle > 0 else 5.7
+    Kp = math.tan(math.radians(45 + friction_angle/2))**2
+    Ng = 0.5 * math.tan(phi) * (Kp / math.cos(phi)**2 - 1)
+    return Nc, Nq, Ng
+
+def show_failure_message(canvas):
+    # Centered horizontally and vertically, with red color
+    canvas.create_text(
+        CANVAS_WIDTH / 2,
+        CANVAS_HEIGHT / 2,
+        "FOUNDATION FAILURE!",
+        color="red",
+        anchor="center",
+        font="Arial 20"
+    )
 
 if __name__ == '__main__':
     main()
