@@ -70,6 +70,7 @@ def main():
     print()
     # Ask user to input soil type
     soil_type = choose_soil_type()
+    print(soil_type)
     print()
     print("Great choice!")
 
@@ -128,6 +129,9 @@ def main():
             print()
 
         num_footings = int(num_footings) # Convert input from string to integer
+
+        # Draw foundation
+        draw_foundation(canvas, foundation_type, foundation_width, foundation_depth, num_footings)
         
         # Calculate load per footing and pressure
         foundation_area = num_footings * foundation_width ** 2
@@ -206,8 +210,6 @@ def main():
         print()
         print("We'll now draw a simplified version of your building's foundation \nto show how its weight spreads into the soil")
         
-        draw_foundation(canvas, foundation_type, foundation_width, foundation_depth, num_footings)
-        
         draw_building(canvas, number_of_floors)
 
         
@@ -217,8 +219,7 @@ def main():
 
     else:
         print("Ooops your building is pulling a Titanic! \nFind a Geotechnical Engineer(me) ASAP! \nOr use a deeper foundation, different soil or modify your foundation type (Finding me is a better option though😁)")
-        # Draw failed foundation in red
-        draw_foundation(canvas, foundation_type, foundation_width, foundation_depth, num_footings, color="red")
+       
         draw_building(canvas, number_of_floors)
         # Dramatic soil movement
         animate_failure_soil_particles(canvas, soil_particles)
@@ -343,18 +344,30 @@ Based on soil type choosen, it draws a rectangle with a unique color
 and objects representing soil particles
 """
 def draw_soil(canvas, soil_type):
-    particle_size = 10
+    particle_size = 1
     initial_x = 0
     initial_y = 3 * CANVAS_HEIGHT/4
-    color = 'saddle brown'
+
+    # Map soil types to colors
+    color_map = {
+    "LS": "sandybrown",
+    "MDS": "peru",
+    "DS": "saddlebrown",
+    "SC": "tan",
+    "SIC": "burlywood",
+    "SS": "wheat",
+    "G": "gray"
+    }
+    color = color_map.get(soil_type, "gray") # Default to gray if not found
     soil_particle = []
     
     # Draw soil
     soil = canvas.create_rectangle(0, 3 * CANVAS_HEIGHT/4,
                                     CANVAS_WIDTH,
-                                    CANVAS_HEIGHT, 'beige')
+                                    CANVAS_HEIGHT, color)
     
     if soil_type == "LS":
+        # Draw smaller particles for loose sand
         while (initial_y + particle_size) <= CANVAS_HEIGHT:
             while (initial_x + particle_size) <= CANVAS_WIDTH:
 
@@ -362,7 +375,7 @@ def draw_soil(canvas, soil_type):
                                         initial_y,
                                         initial_x + particle_size,
                                         initial_y + particle_size,
-                                        color)
+                                        "brown")
                 soil_particle.append((particle_id, initial_x, initial_y))
                 spacing = random.randint(1,25)
                 # Update initial_x to begin at specified point on right 
@@ -375,6 +388,7 @@ def draw_soil(canvas, soil_type):
     
     
     elif soil_type == "MDS":
+        # Draw medium sized particles for medium dense sand
         while (initial_y + particle_size) <= CANVAS_HEIGHT:
             while (initial_x + particle_size) <= CANVAS_WIDTH:
 
@@ -382,7 +396,7 @@ def draw_soil(canvas, soil_type):
                                         initial_y,
                                         initial_x + particle_size,
                                         initial_y + particle_size,
-                                        color)
+                                        "black")
                 soil_particle.append((particle_id, initial_x, initial_y))
                 spacing = random.randint(10, 25)
                 # Update initial_x to begin at specified point on right 
@@ -394,6 +408,7 @@ def draw_soil(canvas, soil_type):
             initial_x = 0
     
     elif soil_type == "DS":
+        # Draw larger particles for dense sand
         while (initial_y + particle_size) <= CANVAS_HEIGHT:
             while (initial_x + particle_size) <= CANVAS_WIDTH:
 
@@ -401,7 +416,7 @@ def draw_soil(canvas, soil_type):
                                         initial_y,
                                         initial_x + particle_size,
                                         initial_y + particle_size,
-                                        color)
+                                        "brown")
 
                 soil_particle.append((particle_id, initial_x, initial_y))
                 spacing = 5
@@ -414,18 +429,19 @@ def draw_soil(canvas, soil_type):
             initial_x = 0
     
     elif soil_type == "SC":
+        # Draw larger, flatter particles for clay
         while (initial_y + particle_size) <= CANVAS_HEIGHT:
             while (initial_x + particle_size) <= CANVAS_WIDTH:
-                particle_size_x = random.randint(3, 10)
+                particle_size_x = random.randint(3, 10) # Make particles wider
                 particle_size_y = 1
 
                 particle_id = canvas.create_oval(initial_x,
                                         initial_y,
                                         initial_x + particle_size_x,
                                         initial_y + particle_size_y,
-                                        'beige')
+                                        'brown')
                 soil_particle.append((particle_id, initial_x, initial_y))
-                spacing = random.randint(20, 30)
+                spacing = random.randint(1, 20) # Random spacing for variability
                 # Update initial_x to begin at specified point on right 
                 initial_x += (particle_size + spacing)
 
@@ -435,59 +451,62 @@ def draw_soil(canvas, soil_type):
             initial_x = 0
    
     elif soil_type == "SIC":
+        # Draw rectangular particles for stiff clay
         while (initial_y + particle_size) <= CANVAS_HEIGHT:
             while (initial_x + particle_size) <= CANVAS_WIDTH:
-                particle_size_x = 6
-                particle_size_y = 3
+                particle_size_x = 6 # Fixed width for rectangular particles
+                particle_size_y = 3 # Fixed height for rectangular particles
 
                 particle_id = canvas.create_rectangle(initial_x,
                                         initial_y,
                                         initial_x + particle_size_x,
                                         initial_y + particle_size_y,
-                                        'beige')
+                                        'gray')
                 soil_particle.append((particle_id, initial_x, initial_y))
-                spacing = random.randint(20, 25)
+                spacing = random.randint(1, 10) # Random spacing for variability
                 # Update initial_x to begin at specified point on right 
                 initial_x += (particle_size + spacing)
 
-            spacing = 10
+            spacing = random.randint(7, 10)
             # Update initial_y to begin below
             initial_y += (particle_size + spacing)
-            initial_x = random.randint(0, 20)
+            initial_x = random.randint(0, 5) # Randomize starting x for next row
    
     elif soil_type == "SS":
+        # Draw larger, flatter particles for silty sand
         while (initial_y + particle_size) <= CANVAS_HEIGHT:
             while (initial_x + particle_size) <= CANVAS_WIDTH:
-                particle_size_x = random.randint(1, 7)
+                particle_size_x = random.randint(1, 7) # Make particles wider
                 particle_size_y = 1
 
                 particle_id = canvas.create_oval(initial_x,
                                         initial_y,
                                         initial_x + particle_size_x,
                                         initial_y + particle_size_y,
-                                        'beige')
+                                        'black')
                 
                 soil_particle.append((particle_id, initial_x, initial_y))
-                spacing = random.randint(20, 40)
+                spacing = random.randint(1, 20) # Random spacing for variability
                 # Update initial_x to begin at specified point on right 
                 initial_x += (particle_size + spacing)
 
             spacing = 10
             # Update initial_y to begin below
             initial_y += (particle_size + spacing)
-            initial_x = random.randint(0, 20)
+            initial_x = random.randint(0, 5) # Randomize starting x for next row
     
     else:
+        # Draw irregular polygonal particles for gravel
         while (initial_y + particle_size) <= CANVAS_HEIGHT:
             while (initial_x + particle_size) <= CANVAS_WIDTH:
-                particle_size_poly = random.randint(9,15)
+                particle_size_poly = random.randint(9,15) # Size of the polygon
                 polygon_top_left = initial_x + 3
                 polygon_top_right = initial_x + random.randint(7,10)
                 polygon_middle_right = initial_x + random.randint(11,15)
                 polygon_bottom_left = initial_x + random.randint(3,5)
-                polygon_bottom_right = initial_x + random.randint(7,10)
-                particle_size_x = random.randint(7, 15)
-                particle_size_y = random.randint(7, 15)
+                polygon_bottom_right = initial_x + random.randint(7,10) 
+                particle_size_x = random.randint(7, 15) # Width of the particle
+                particle_size_y = random.randint(7, 15) # Height of the particle
                 
                 particle_id = canvas.create_polygon(polygon_top_left,
                                                 initial_y,
@@ -500,17 +519,20 @@ def draw_soil(canvas, soil_type):
                                                 polygon_bottom_left,
                                                 initial_y + particle_size_poly,
                                                 initial_x,
-                                                initial_y + (1/2 * particle_size_poly)
+                                                initial_y + (1/2 * particle_size_poly),
+                                                fill='gray', 
+                                                outline='black'
                                                 )
-                spacing = random.randint(0,3)
+                spacing = random.randint(0,3) # Random spacing for variability
                 soil_particle.append((particle_id, initial_x, initial_y))
                 # Update initial_x to begin at specified point on right 
                 initial_x = (polygon_middle_right + spacing) 
             
             # Update initial_y to begin below
             initial_y += (10 + spacing)
-            initial_x = random.randint(0, 3)
+            initial_x = random.randint(0, 3) # Randomize starting x for next row
     return soil_particle
+
 
 def animate_soil_particles(canvas, soil_particles):
     base_y = 3 * CANVAS_HEIGHT / 4
@@ -834,27 +856,6 @@ def draw_building(canvas,number_of_floors):
         top_y -= 70
         bottom_y -= 70
 
-    """
-    # Vertical arrows (loads)
-    arrow_x_positions = [CANVAS_WIDTH/2 - 30, CANVAS_WIDTH/2, CANVAS_WIDTH/2 + 30]
-    y_start = building_base_bottom - 10   # start from high above
-    y_end = building_base_bottom + 40       # ends at top of building
-
-    for x in arrow_x_positions:
-        canvas.create_line(x, y_start, x, y_end, "black")
-        canvas.create_line(x - 5, y_end - 5, x, y_end, "black")  # left wing
-        canvas.create_line(x + 5, y_end - 5, x, y_end, "black")  # right wing
-
-    # Load spread zone
-    canvas.create_line(building_left, building_base_bottom, building_left - 50, CANVAS_HEIGHT, "green")
-    canvas.create_line(building_right, building_base_bottom, building_right + 50, CANVAS_HEIGHT, "green")
-
-    # Displays words centered horizontally on the canva
-    centered_x_position = CANVAS_WIDTH/2 - (len("Load spread zone")/2)*7
-    canvas.create_text(centered_x_position,
-    CANVAS_HEIGHT - 50, "Load spread zone", color = "black",
-    font_size = 15)
-    """
      
 def compute_bearing_factors(friction_angle):
     phi = math.radians(friction_angle)
