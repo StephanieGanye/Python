@@ -70,7 +70,6 @@ def main():
     print()
     # Ask user to input soil type
     soil_type = choose_soil_type()
-    print(soil_type)
     print()
     print("Great choice!")
 
@@ -131,7 +130,7 @@ def main():
         num_footings = int(num_footings) # Convert input from string to integer
 
         # Draw foundation
-        draw_foundation(canvas, foundation_type, foundation_width, foundation_depth, num_footings)
+        foundation = draw_foundation(canvas, foundation_type, foundation_width, foundation_depth, num_footings)
         
         # Calculate load per footing and pressure
         foundation_area = num_footings * foundation_width ** 2
@@ -214,22 +213,22 @@ def main():
 
         
         # Animate soil particles multiple times to simulate natural movement and settling
-        for _ in range(15):
-            animate_soil_particles(canvas, soil_particles)
+        
+        move_soil_particles(canvas, soil_particles, foundation, foundation_depth, foundation_width)
 
     else:
         print("Ooops your building is pulling a Titanic! \nFind a Geotechnical Engineer(me) ASAP! \nOr use a deeper foundation, different soil or modify your foundation type (Finding me is a better option though😁)")
        
         draw_building(canvas, number_of_floors)
         # Dramatic soil movement
-        animate_failure_soil_particles(canvas, soil_particles)
+        move_soil_particles(canvas, soil_particles, foundation)
         # Show failure message
         show_failure_message(canvas)
 
     animate_clouds(canvas, cloud_one, cloud_two, cloud_three)
     canvas.wait_for_click()
-
     canvas.wait_for_click()
+
 def wait_for_enter(message="Press Enter to continue..."):
     if not hasattr(wait_for_enter, "shown"):
         input(message)
@@ -338,6 +337,7 @@ def choose_soil_type():
         print()
 
     return soil_type
+
 """
 Takes canvas and soil type choosen as inputes
 Based on soil type choosen, it draws a rectangle with a unique color
@@ -534,59 +534,30 @@ def draw_soil(canvas, soil_type):
     return soil_particle
 
 
-def animate_soil_particles(canvas, soil_particles):
+def move_soil_particles(canvas, soil_particles, foundation, foundation_depth, foundation_width):
     base_y = 3 * CANVAS_HEIGHT / 4
-    particle_size = 10
     updated_particles = []
     for i, (particle_id, x, y) in enumerate(soil_particles):
-        # Get current y position
-        current_y = canvas.get_top_y(particle_id)
-        # The closer to base_y, the more it moves
-        distance_from_base = current_y - base_y
-        # Particles near the base move more, deeper ones less
-        move_factor = max(1, 10 - int(distance_from_base / 8))
-        dx = random.randint(-1, 1)
-        dy = random.randint(move_factor // 2, move_factor)
-        # Calculate new position
-        new_x = canvas.get_left_x(particle_id) + dx
-        new_y = current_y + dy
-        new_x2 = new_x + particle_size
-        new_y2 = new_y + particle_size
-        overlapping = canvas.find_overlapping(new_x, new_y, new_x2, new_y2)
-        # Only move if not overlapping with others (or only itself)
-        if not overlapping or (len(overlapping) == 1 and overlapping[0] == particle_id):
-            canvas.move(particle_id, dx, dy)
-            updated_particles.append((particle_id, new_x, new_y))
-        else:
-            # If can't move, keep old position
-            updated_particles.append((particle_id, x, y))
-    # Update the soil_particles list in place
-    soil_particles[:] = updated_particles
-    time.sleep(0.08)
-def animate_failure_soil_particles(canvas, soil_particles):
-    base_y = 3 * CANVAS_HEIGHT / 4
-    particle_size = 10
-    for _ in range(20):  # More frames for dramatic effect
-        updated_particles = []
-        for i, (particle_id, x, y) in enumerate(soil_particles):
-            current_y = canvas.get_top_y(particle_id)
-            distance_from_base = current_y - base_y
-            # Move much more on failure
-            move_factor = max(5, 25 - int(distance_from_base / 8))
-            dx = random.randint(-5, 5)
-            dy = random.randint(move_factor // 2, move_factor)
-            new_x = canvas.get_left_x(particle_id) + dx
-            new_y = current_y + dy
-            new_x2 = new_x + particle_size
-            new_y2 = new_y + particle_size
-            overlapping = canvas.find_overlapping(new_x, new_y, new_x2, new_y2)
-            if not overlapping or (len(overlapping) == 1 and overlapping[0] == particle_id):
-                canvas.move(particle_id, dx, dy)
-                updated_particles.append((particle_id, new_x, new_y))
+        # Get foundation coordinates
+        for foundation_part in foundation:
+            foundation_coords = canvas.coords(foundation_part)
+            foundation_left_x = foundation_coords[0]
+            foundation_top_y = foundation_coords[1]
+
+            # Check if particle is within foundation area
+            if (foundation_left_x <= x <= foundation_left_x + foundation_width * 30):
+                dx = random.choice([-4, 0, 4])
+                depth = y - (foundation_top_y + foundation_depth * 30) # Depth below foundation
+                dy = max(1, int(5 - depth / 20)) # Speed decreases with depth
+                # If within foundation area, move particle below foundation to simulate compaction
+                canvas.move(particle_id, x + dx, y + dy)
+                updated_particles.append((particle_id, x + dx, y+ dy))
             else:
                 updated_particles.append((particle_id, x, y))
-        soil_particles[:] = updated_particles
-        time.sleep(0.05)
+
+    # Update the soil_particles list in place
+    soil_particles[:] = updated_particles
+    
 
 # Gives user pros and cons of the soil type they chose
 def pros_and_cons(soil_type_choosen):
@@ -810,11 +781,13 @@ def draw_foundation(canvas, foundation_type, foundation_width, foundation_depth,
     scale = 30
     foundation_top = 3 * CANVAS_HEIGHT / 4
     foundation_bottom = foundation_top + foundation_depth * scale
+    foundation = []
 
     if foundation_type == "R":
         left_x = CANVAS_WIDTH / 2 - foundation_width * scale
         right_x = CANVAS_WIDTH / 2 + foundation_width * scale
-        canvas.create_rectangle(left_x, foundation_top, right_x, foundation_bottom, color)
+        foundation.append(canvas.create_rectangle(left_x, foundation_top, right_x, foundation_bottom, color))
+    
     elif foundation_type == "I":
         # Confine footings under the building
         building_left = CANVAS_WIDTH / 2 - 50
@@ -829,7 +802,8 @@ def draw_foundation(canvas, foundation_type, foundation_width, foundation_depth,
         for center_x in centers:
             left_x = center_x - footing_width / 2
             right_x = center_x + footing_width / 2
-            canvas.create_rectangle(left_x, foundation_top, right_x, foundation_bottom, color)
+            foundation.append(canvas.create_rectangle(left_x, foundation_top, right_x, foundation_bottom, color))
+    return foundation
 
 def draw_building(canvas,number_of_floors):
     # Draw building above foundation
